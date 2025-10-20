@@ -162,7 +162,7 @@
             citationSection.innerHTML = '';
 
 
-            // UPDATED SYSTEM PROMPT: Now explicitly demands Markdown tables for sections 3, 4, 5, and 6.
+            // UPDATED SYSTEM PROMPT: Section 7 now mandates a bulleted list of next steps.
             const systemPrompt = `You are an expert product strategist and startup consultant. Your task is to analyze the given product idea and generate a comprehensive, detailed MVP (Minimum Viable Product) launch plan. The entire output must be presented as a single, highly structured professional business report in Markdown format.
 
 **MANDATORY STRUCTURE:** The report must contain these and ONLY these seven sections, marked with level-2 headings (##). Do not include any introductory or concluding remarks outside of this structure. The content must be detailed and professional.
@@ -173,7 +173,7 @@
 4.  **Customer Results from Core Features:** This section MUST be a **Markdown table** with 2 columns: **Core Feature | Customer Outcome**. The content of the table cells must be plain text, free of stars dashes or commas, focusing on clarity. Do not include any external bullet points or descriptive text outside of this table.
 5.  **Go-to-Market (GTM) Plan:** This section MUST be a **Markdown table** with 3 columns: **Phase | Action | Key Metric**. The content of the table cells must be plain text, free of stars dashes or commas. Do not include any external bullet points or descriptive text outside of this table.
 6.  **Case Study/Grounding:** This section MUST be a **Markdown table** with 3 columns: **Company/Founder | Model/Vertical | Key Learning**. The content of the table cells must be plain text, free of stars dashes or commas. Use Google Search for grounding to provide real-world data. Do not include any external bullet points or descriptive text outside of this table.
-7.  **Plan Summary and Next Steps:** A concluding paragraph summarizing the key takeaway and proposing the next action items for the founder.
+7.  **Plan Summary and Next Steps:** A concluding section that starts with a one-sentence summary, immediately followed by a bulleted list of 3-5 next action items using the standard Markdown asterisk (*).
 `;
 
             const userQuery = `Generate a detailed MVP plan for the following product idea: "${productIdea}"`;
@@ -311,8 +311,9 @@
             // 2. Convert ## headings to H2 with Tailwind styles
             html = html.replace(/^##\s*(.*)$/gm, '<h2 class="text-2xl font-bold text-gray-700 mt-6 mb-3 border-b-2 pb-1 border-indigo-200">$1</h2>');
 
-            // 3. Convert simple lists (starting with *)
-            html = html.replace(/^\*\s*(.*)$/gm, '<li>$1</li>');
+            // 3. Convert simple lists (starting with * or -)
+            // This is updated to handle both markers and remove them, providing clean <li> content.
+            html = html.replace(/^[*-]\s*(.*)$/gm, '<li>$1</li>');
             
             // Wrap contiguous list items with ul tags
             html = html.replace(/(\n?<li>.*?<\/li>)+/gs, (match) => {
