@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Idea to MVP Plan Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fc;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 960px;
+        }
+        .plan-output {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            line-height: 1.6;
+            border: 1px solid #e5e7eb;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #10b981;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+
+    <!-- Header & External CTA Link (MANDATORY) -->
+    <header class="bg-green-600 shadow-xl rounded-xl p-4 mb-8">
+        <a href="https://tagmango.com/web/checkout/68f5c66b802d39bce3b68e8c" target="_blank" 
+           class="block text-center text-white font-bold text-lg sm:text-xl py-3 rounded-lg hover:bg-green-700 transition duration-300">
+            🚀 Ready to launch? Enroll in the Product Launch Course Now! (Click Here)
+        </a>
+    </header>
+
+    <div class="container mx-auto">
+        <h1 class="text-4xl font-bold text-gray-800 mb-2">Idea to MVP Plan Generator</h1>
+        <p class="text-gray-600 mb-8">Enter your product idea below to generate a detailed, structured plan covering USP, features, competition, GTM strategy, and a real-world case study.</p>
+
+        <!-- Input Form -->
+        <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200 mb-8">
+            <label for="product-idea" class="block text-lg font-medium text-gray-700 mb-2">Your Product Idea:</label>
+            <textarea id="product-idea" rows="4" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500 transition duration-150" placeholder="e.g., A mobile app that uses AI to suggest healthy dinner recipes based on current refrigerator contents and dietary restrictions."></textarea>
+            
+            <div class="mt-4 flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
+                <button id="generate-button" class="flex-1 bg-indigo-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-indigo-700 transition duration-300 shadow-md">
+                    Generate Detailed MVP Plan
+                </button>
+                <button id="copy-button" class="flex-1 bg-gray-500 text-white font-semibold py-3 px-6 rounded-lg hover:bg-gray-600 transition duration-300 shadow-md hidden" disabled>
+                    Copy Plan to Clipboard
+                </button>
+            </div>
+            
+            <p id="copy-message" class="mt-2 text-sm text-green-600 hidden"></p>
+        </div>
+
+        <!-- Output and Loading Area -->
+        <div id="loading-area" class="flex justify-center items-center h-24 hidden">
+            <div class="loader"></div>
+            <p class="ml-4 text-gray-600 font-medium">Analyzing idea and researching case studies...</p>
+        </div>
+
+        <div id="plan-section" class="hidden mt-8">
+            <h2 class="text-3xl font-bold text-gray-800 mb-4">Generated Plan (Ready for PDF)</h2>
+            <p class="text-sm text-gray-500 mb-4 bg-yellow-100 p-3 rounded-lg border border-yellow-300">
+                Tip: Copy the text below and paste it into a word processor (like Google Docs or Word) to create a formatted PDF document.
+            </p>
+            <div id="plan-output" class="plan-output">
+                <!-- Plan content will be inserted here -->
+            </div>
+            <div id="citation-section" class="mt-4 text-sm text-gray-600">
+                <!-- Citations will be added here -->
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        // Global environment variables (provided by the Canvas environment)
+        const apiKey = ""; // API key is handled by the environment if left blank
+        const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent";
+
+        // DOM elements
+        const generateButton = document.getElementById('generate-button');
+        const copyButton = document.getElementById('copy-button');
+        const ideaInput = document.getElementById('product-idea');
+        const loadingArea = document.getElementById('loading-area');
+        const planSection = document.getElementById('plan-section');
+        const planOutput = document.getElementById('plan-output');
+        const copyMessage = document.getElementById('copy-message');
+        const citationSection = document.getElementById('citation-section');
+
+        // Event Listeners
+        generateButton.addEventListener('click', generatePlan);
+        copyButton.addEventListener('click', copyPlan);
+
+        // --- Core Functions ---
+
+        /**
+         * Simple utility to safely copy text to clipboard.
+         * Uses execCommand for broader compatibility in iFrames.
+         */
+        function copyPlan() {
+            const textToCopy = planOutput.innerText;
+            
+            // Create a temporary textarea element
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = textToCopy;
+            document.body.appendChild(tempTextArea);
+            
+            // Select and copy the text
+            tempTextArea.select();
+            
+            try {
+                document.execCommand('copy');
+                copyMessage.textContent = 'Plan copied to clipboard successfully!';
+                copyMessage.classList.remove('hidden');
+                setTimeout(() => copyMessage.classList.add('hidden'), 3000);
+            } catch (err) {
+                console.error('Could not copy text: ', err);
+                copyMessage.textContent = 'Error copying plan.';
+                copyMessage.classList.remove('hidden');
+            }
+            
+            // Clean up
+            document.body.removeChild(tempTextArea);
+        }
+
+        /**
+         * Handles the main process of generating the MVP plan.
+         */
+        async function generatePlan() {
+            const productIdea = ideaInput.value.trim();
+
+            if (!productIdea) {
+                // Show a simple error/message instead of alert()
+                planOutput.innerHTML = '<p class="text-red-600 font-semibold">Please enter a product idea to generate the plan.</p>';
+                planSection.classList.remove('hidden');
+                copyButton.classList.add('hidden');
+                citationSection.innerHTML = '';
+                return;
+            }
+
+            // Reset UI and show loading
+            planOutput.innerHTML = '';
+            planSection.classList.add('hidden');
+            copyButton.classList.add('hidden');
+            loadingArea.classList.remove('hidden');
+            citationSection.innerHTML = '';
+
+
+            // UPDATED SYSTEM PROMPT: Now explicitly demands Markdown tables for sections 3, 4, 5, and 6.
+            const systemPrompt = `You are an expert product strategist and startup consultant. Your task is to analyze the given product idea and generate a comprehensive, detailed MVP (Minimum Viable Product) launch plan. The entire output must be presented as a single, highly structured professional business report in Markdown format.
+
+**MANDATORY STRUCTURE:** The report must contain these and ONLY these seven sections, marked with level-2 headings (##). Do not include any introductory or concluding remarks outside of this structure. The content must be detailed and professional.
+
+1.  **Unique Selling Proposition (USP):** A single, clear, powerful statement.
+2.  **Core Features (MVP):** A list of 3-5 essential features required for the MVP.
+3.  **Competitor Analysis:** This section MUST be a **Markdown table** with 3 columns: **Competitor | Primary Advantage | Perceived Weakness**. Do not include any external bullet points or descriptive text outside of this table.
+4.  **Customer Results from Core Features:** This section MUST be a **Markdown table** with 2 columns: **Core Feature | Customer Outcome**. The content of the table cells must be plain text, free of stars dashes or commas, focusing on clarity. Do not include any external bullet points or descriptive text outside of this table.
+5.  **Go-to-Market (GTM) Plan:** This section MUST be a **Markdown table** with 3 columns: **Phase | Action | Key Metric**. The content of the table cells must be plain text, free of stars dashes or commas. Do not include any external bullet points or descriptive text outside of this table.
+6.  **Case Study/Grounding:** This section MUST be a **Markdown table** with 3 columns: **Company/Founder | Model/Vertical | Key Learning**. The content of the table cells must be plain text, free of stars dashes or commas. Use Google Search for grounding to provide real-world data. Do not include any external bullet points or descriptive text outside of this table.
+7.  **Plan Summary and Next Steps:** A concluding paragraph summarizing the key takeaway and proposing the next action items for the founder.
+`;
+
+            const userQuery = `Generate a detailed MVP plan for the following product idea: "${productIdea}"`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+                tools: [{ "google_search": {} }],
+            };
+            
+            try {
+                const result = await callGeminiApi(payload);
+                
+                if (result) {
+                    planOutput.innerHTML = formatMarkdownToHtml(result.text);
+                    planSection.classList.remove('hidden');
+                    copyButton.classList.remove('hidden');
+                    displayCitations(result.sources);
+                } else {
+                    planOutput.innerHTML = '<p class="text-red-600 font-semibold">Could not generate plan. Please try again or check the product idea.</p>';
+                    planSection.classList.remove('hidden');
+                }
+
+            } catch (error) {
+                console.error("API call failed:", error);
+                planOutput.innerHTML = `<p class="text-red-600 font-semibold">An error occurred during plan generation: ${error.message}.</p>`;
+                planSection.classList.remove('hidden');
+            } finally {
+                loadingArea.classList.add('hidden');
+            }
+        }
+
+        /**
+         * Makes the Gemini API call with exponential backoff for retries.
+         */
+        async function callGeminiApi(payload, retries = 0, maxRetries = 5) {
+            const delay = Math.pow(2, retries) * 1000 + (Math.random() * 1000); // Exponential backoff + jitter
+
+            try {
+                const response = await fetch(`${apiUrl}?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    if (response.status === 429 && retries < maxRetries) {
+                        // Rate limit error (429), retry
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        return callGeminiApi(payload, retries + 1, maxRetries);
+                    }
+                    throw new Error(`API call failed with status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                const candidate = result.candidates?.[0];
+
+                if (candidate && candidate.content?.parts?.[0]?.text) {
+                    const text = candidate.content.parts[0].text;
+                    let sources = [];
+                    const groundingMetadata = candidate.groundingMetadata;
+                    
+                    if (groundingMetadata && groundingMetadata.groundingAttributions) {
+                        sources = groundingMetadata.groundingAttributions
+                            .map(attribution => ({
+                                uri: attribution.web?.uri,
+                                title: attribution.web?.title,
+                            }))
+                            .filter(source => source.uri && source.title);
+                    }
+                    return { text, sources };
+
+                } else {
+                    throw new Error("Received an unexpected response structure from the API.");
+                }
+
+            } catch (error) {
+                if (retries < maxRetries) {
+                    // Retry for other transient errors (e.g., network issues)
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return callGeminiApi(payload, retries + 1, maxRetries);
+                }
+                throw new Error(`Final API call attempt failed: ${error.message}`);
+            }
+        }
+
+        /**
+         * Converts basic Markdown (headings, lists, bold, and TABLES) to structured HTML for display.
+         */
+        function formatMarkdownToHtml(markdownText) {
+            let html = markdownText;
+            
+            // 1. --- Table Conversion ---
+            const tableRegex = /(\|.*\|\r?\n\|[ \t]*[-:]+[ \t]*\|.*\r?\n(\n?\|.*\|)*)/g;
+
+            html = html.replace(tableRegex, (match) => {
+                const lines = match.trim().split(/\r?\n/).filter(line => line.trim().startsWith('|'));
+                
+                if (lines.length < 2) return match; 
+
+                let tableHtml = '<div class="overflow-x-auto my-6"><table class="min-w-full divide-y divide-gray-300 rounded-xl shadow-lg border border-gray-200">';
+                
+                // Process Header (First line)
+                const headerCells = lines[0].split('|').slice(1, -1).map(h => h.trim());
+                tableHtml += '<thead class="bg-indigo-600 text-white">';
+                tableHtml += '<tr>';
+                headerCells.forEach(cell => {
+                    tableHtml += `<th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">${cell}</th>`;
+                });
+                tableHtml += '</tr>';
+                tableHtml += '</thead>';
+
+                // Process Body (Starting from the third line, skipping the separator)
+                tableHtml += '<tbody class="divide-y divide-gray-200">';
+                for (let i = 2; i < lines.length; i++) {
+                    const rowCells = lines[i].split('|').slice(1, -1).map(c => c.trim());
+                    if (rowCells.length !== headerCells.length) continue; 
+                    
+                    tableHtml += '<tr class="bg-white hover:bg-gray-50">';
+                    rowCells.forEach(cell => {
+                        // Clean the cell content of stars, dashes, and commas as requested
+                        // This robust cleaning handles the user's requirement: no stars, dashes, or commas.
+                        const cleanCell = cell.replace(/[\*\-,]/g, '').trim(); 
+                        tableHtml += `<td class="px-4 py-3 text-sm text-gray-800">${cleanCell}</td>`;
+                    });
+                    tableHtml += '</tr>';
+                }
+                tableHtml += '</tbody>';
+                tableHtml += '</table></div>';
+                
+                return tableHtml;
+            });
+            // --- End Table Conversion ---
+
+            // 2. Convert ## headings to H2 with Tailwind styles
+            html = html.replace(/^##\s*(.*)$/gm, '<h2 class="text-2xl font-bold text-gray-700 mt-6 mb-3 border-b-2 pb-1 border-indigo-200">$1</h2>');
+
+            // 3. Convert simple lists (starting with *)
+            html = html.replace(/^\*\s*(.*)$/gm, '<li>$1</li>');
+            
+            // Wrap contiguous list items with ul tags
+            html = html.replace(/(\n?<li>.*?<\/li>)+/gs, (match) => {
+                return '<ul class="list-disc ml-6 space-y-1">' + match.replace(/\n/g, '').replace(/<\/?li>/g, (tag) => {
+                    return tag === '<li>' ? '<li class="text-gray-700">' : tag;
+                }) + '</ul>';
+            });
+            
+            // 4. Convert bold text
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            
+            // 5. Convert remaining newline characters to paragraphs/breaks
+            html = html.replace(/\n\n/g, '@@PARAGRAPH_SEP@@');
+            html = html.replace(/\n/g, '<br>');
+            html = html.replace(/@@PARAGRAPH_SEP@@/g, '</p><p>');
+
+            // Remove <br> tags that might have appeared before or after structural elements
+            html = html.replace(/<br>\s*(<h2|<ul|<div class="overflow-x-auto)/g, '$1');
+            html = html.replace(/(<\/h2>|<\/ul>|<\/table><\/div>)\s*<br>/g, '$1');
+
+
+            // 6. Wrap the whole thing in a p tag if it starts with text and insert a placeholder p tag where needed
+            if (!html.startsWith('<h2') && !html.startsWith('<div class="overflow-x-auto') && !html.startsWith('<ul')) {
+                html = `<p class="text-gray-700">${html}</p>`;
+            } else {
+                // Ensure text nodes that start inside a structural element are also wrapped in p if needed
+                html = html.replace(/(<\/h2>|<div class="overflow-x-auto">.*?<\/table><\/div>|<ul class="list-disc ml-6 space-y-1">.*?<\/ul>)(.*?)(<h2|<ul|<div class="overflow-x-auto|$)/gs, (match, p1, p2, p3) => {
+                    const trimmedP2 = p2.trim();
+                    if (trimmedP2) {
+                        return p1 + `<p class="text-gray-700">${trimmedP2}</p>` + p3;
+                    }
+                    return match; 
+                });
+            }
+            
+            // Final cleanup of redundant <p> tags around structural elements
+            html = html.replace(/<p class="text-gray-700">\s*<\/p>/g, '');
+            
+            return html;
+        }
+
+        /**
+         * Displays the citation sources if Google Search was used.
+         */
+        function displayCitations(sources) {
+            if (!sources || sources.length === 0) {
+                citationSection.innerHTML = '';
+                return;
+            }
+
+            let html = '<p class="font-semibold text-xs">Sources for Grounding (Case Study & Competitor Analysis):</p><ul class="list-none space-y-1 mt-2">';
+            sources.forEach((source, index) => {
+                html += `<li class="text-xs text-gray-500">
+                    [${index + 1}] <a href="${source.uri}" target="_blank" class="text-indigo-600 hover:underline">${source.title || source.uri}</a>
+                </li>`;
+            });
+            html += '</ul>';
+            citationSection.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
